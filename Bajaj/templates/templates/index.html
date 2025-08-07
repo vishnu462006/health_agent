@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insurance Query Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <header class="bg-primary text-white py-3 mb-4">
+            <div class="container">
+                <h1 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Health Insurance Query Assistant
+                </h1>
+                <p class="mb-0">Upload documents and get instant answers to your insurance questions</p>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="row">
+                <!-- Left Panel - File Upload -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-upload me-2"></i>
+                                Document Upload
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area mb-3" id="uploadArea">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Drag & drop files here or click to browse</p>
+                                    <p class="small text-muted">Supported: PDF, DOCX, MSG, EML</p>
+                                </div>
+                                <input type="file" id="fileInput" class="d-none" accept=".pdf,.docx,.msg,.eml">
+                            </div>
+                            
+                            <div id="uploadProgress" class="d-none">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Uploading and processing...</small>
+                            </div>
+                            
+                            <div id="uploadResults" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Query Interface -->
+                <div class="col-md-8">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-search me-2"></i>
+                                Query Interface
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Query Input -->
+                            <div class="mb-3">
+                                <label for="queryInput" class="form-label">Enter your insurance question:</label>
+                                <div class="input-group">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="queryInput" 
+                                        placeholder="e.g., 38M, kidney transplant in Nagpur, 9-month insurance"
+                                        onkeypress="handleKeyPress(event)"
+                                    >
+                                    <button class="btn btn-primary" type="button" onclick="processQuery()">
+                                        <i class="fas fa-search me-1"></i>
+                                        Search
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Try queries like: "maternity coverage", "pre-existing conditions", or "waiting period for surgery"
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="btn-group mb-3" role="group">
+                                <button class="btn btn-outline-secondary" onclick="parseQuery()">
+                                    <i class="fas fa-cogs me-1"></i>
+                                    Parse Query
+                                </button>
+                                <button class="btn btn-outline-info" onclick="searchQuery()">
+                                    <i class="fas fa-search me-1"></i>
+                                    Search Docs
+                                </button>
+                                <button class="btn btn-success" onclick="getAnswer()">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Get Answer
+                                </button>
+                            </div>
+
+                            <!-- Results Area -->
+                            <div id="results" class="results-area"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mb-0">Processing your request...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let loadingModal;
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            setupFileUpload();
+        });
+
+        // File Upload Setup
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // Click to browse
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handle file upload
+        async function handleFileUpload(file) {
+            const allowedTypes = ['.pdf', '.docx', '.msg', '.eml'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(fileExt)) {
+                showAlert('Please select a valid file type (PDF, DOCX, MSG, EML)', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const progressDiv = document.getElementById('uploadProgress');
+            const resultsDiv = document.getElementById('uploadResults');
+            
+            progressDiv.classList.remove('d-none');
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Success!</strong> ${result.message}
+                            <br><small>File: ${result.filename} | Chunks: ${result.chunks_ingested}</small>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.detail || 'Upload failed');
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                progressDiv.classList.add('d-none');
+            }
+        }
+
+        // Query processing functions
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                processQuery();
+            }
+        }
+
+        function processQuery() {
+            getAnswer();
+        }
+
+        async function parseQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                showAlert('Please enter a query', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const response = await fetch('/parse', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query})
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayResults('Query Parsing Results', data.parsed_data, 'info');
+                } else {
+                    throw new Error(data.detail || 'Parsing failed');
+                }
+            } catch (error) {
+                showAlert(`Error parsing query: ${error.message}`, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function searchQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                showAlert('Please enter a query', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query})
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displaySearchResults(data.results);
+                } else {
+                    throw new Error(data.detail || 'Search failed');
+                }
+            } catch (error) {
+                showAlert(`Error searching: ${error.message}`, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function getAnswer() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                showAlert('Please enter a query', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const response = await fetch('/answer', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query})
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayAnswerResults(data.answers);
+                } else {
+                    throw new Error(data.detail || 'Answer generation failed');
+                }
+            } catch (error) {
+                showAlert(`Error getting answer: ${error.message}`, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display functions
+        function displayResults(title, data, type = 'primary') {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="card border-${type}">
+                    <div class="card-header bg-${type} text-white">
+                        <h6 class="mb-0">${title}</h6>
+                    </div>
+                    <div class="card-body">
+                        <pre class="mb-0">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displaySearchResults(results) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No search results found. Try uploading documents first.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Search Results (${results.length})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+            `;
+
+            results.forEach((result, index) => {
+                html += `
+                    <div class="search-result mb-3 ${index < results.length - 1 ? 'border-bottom pb-3' : ''}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-primary">${result.filename}</span>
+                            <span class="badge bg-secondary">Score: ${(result.score * 100).toFixed(1)}%</span>
+                        </div>
+                        <p class="mb-0">${result.text}</p>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayAnswerResults(answers) {
+            const resultsDiv = document.getElementById('results');
+            
+            // Handle both single answer and array of answers
+            const answerArray = Array.isArray(answers) ? answers : [answers];
+            
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Insurance Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+            `;
+
+            answerArray.forEach((answerData, index) => {
+                const answer = answerData.answer;
+                
+                if (answerData.message) {
+                    html += `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${answerData.message}
+                        </div>
+                    `;
+                    return;
+                }
+
+                html += `
+                    <div class="answer-section ${index < answerArray.length - 1 ? 'border-bottom pb-3 mb-3' : ''}">
+                        ${answerData.question ? `<h6 class="text-primary mb-3">Q: ${answerData.question}</h6>` : ''}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-success">
+                                        <i class="fas fa-file-contract me-2"></i>
+                                        Policy
+                                    </h6>
+                                    <p class="mb-0">${answer.policy || 'Not specified'}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-info">
+                                        <i class="fas fa-heart me-2"></i>
+                                        Benefit
+                                    </h6>
+                                    <p class="mb-0">${answer.benefit || 'Not specified'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${answer.details ? `
+                            <div class="mt-3">
+                                <h6 class="fw-bold text-secondary">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Details
+                                </h6>
+                                ${answer.details.description ? `<p><strong>Description:</strong> ${answer.details.description}</p>` : ''}
+                                ${answer.details.waiting_period ? `<p><strong>Waiting Period:</strong> ${answer.details.waiting_period}</p>` : ''}
+                                ${answer.details.coverage_amount ? `<p><strong>Coverage Amount:</strong> ${answer.details.coverage_amount}</p>` : ''}
+                                
+                                ${answer.details.exclusions && answer.details.exclusions.length > 0 ? `
+                                    <div class="mt-2">
+                                        <strong>Exclusions:</strong>
+                                        <ul class="list-unstyled ms-3">
+                                            ${answer.details.exclusions.map(exclusion => `<li><i class="fas fa-times text-danger me-2"></i>${exclusion}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${answer.details.notes && answer.details.notes.length > 0 ? `
+                                    <div class="mt-2">
+                                        <strong>Additional Notes:</strong>
+                                        <ul class="list-unstyled ms-3">
+                                            ${answer.details.notes.map(note => `<li><i class="fas fa-sticky-note text-warning me-2"></i>${note}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                        ${answerData.sources && answerData.sources.length > 0 ? `
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-file me-1"></i>
+                                    Sources: ${answerData.sources.join(', ')}
+                                </small>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Utility functions
+        function showAlert(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+
+        function showLoading() {
+            loadingModal.show();
+        }
+
+        function hideLoading() {
+            loadingModal.hide();
+        }
+    </script>
+</body>
+</html>
