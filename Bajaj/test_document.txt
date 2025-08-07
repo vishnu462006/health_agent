@@ -1,0 +1,34 @@
+HEALTH INSURANCE POLICY DOCUMENT
+
+Policy Number: HI-2024-001
+Policyholder: Sample User
+Coverage: Comprehensive Health Insurance
+
+BENEFITS COVERED:
+- Medical expenses up to Rs. 5,00,000 per year
+- Emergency hospitalization: 100% coverage
+- Pre and post hospitalization: 30 days before, 60 days after
+- Ambulance charges: Up to Rs. 2,000 per incident
+- Surgery expenses: 100% coverage for listed procedures
+- Maternity benefits: Up to Rs. 50,000 (after 2 years waiting period)
+
+WAITING PERIODS:
+- General waiting period: 30 days from policy start date
+- Pre-existing diseases: 2 years waiting period
+- Specific diseases (diabetes, hypertension): 1 year waiting period
+- Maternity and pregnancy: 2 years waiting period
+
+EXCLUSIONS:
+- Dental treatment (except accident-related)
+- Cosmetic surgery
+- Experimental treatments
+- Self-inflicted injuries
+- Treatment outside India (except emergency)
+
+CLAIM PROCESS:
+1. Inform insurance company within 24 hours
+2. Submit required documents within 15 days
+3. Claim processing time: 7-14 working days
+4. Cashless treatment available at network hospitals
+
+For emergency support, call: 1800-XXX-XXXX
