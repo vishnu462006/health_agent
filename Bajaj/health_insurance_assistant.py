@@ -30,7 +30,9 @@ import extract_msg
 
 # Text processing
 import nltk
-from langdetect import detect, LangDetectError
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
+
 
 # Vector search (optional)
 try:
@@ -43,9 +45,9 @@ except ImportError:
     VECTOR_SEARCH_AVAILABLE = False
 
 # === CONFIGURATION ===
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "openai/gpt-4o-mini"
+OPENROUTER_MODEL = "openai/gpt-3.5-turbo"
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "pcsk_7RNs5X_MyuECusJWqmjF7jzfWvxFSSYhtQ4zN4XzXCiCyibVhNBJejiZo5HaNtYaaEEmMU")
 PINECONE_INDEX_NAME = "query-retrival-system"
